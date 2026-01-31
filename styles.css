@@ -37,8 +37,10 @@ body {
 }
 
 .logo {
-  font-weight: 700;
-  font-size: 1.4rem;
+  font-weight: 800;
+  font-size: clamp(1.6rem, 2.6vw, 2.4rem);
+  letter-spacing: 0.02em;
+  color: var(--ink);
 }
 
 .hero-content {
@@ -106,6 +108,11 @@ button {
   font-family: inherit;
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .primary {
   background: var(--primary);
   color: white;
@@ -165,6 +172,13 @@ main {
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
+}
+
+.goal-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
 }
 
 .goal-meta {
@@ -229,6 +243,15 @@ main {
   gap: 18px;
 }
 
+.empty-state {
+  margin-top: 20px;
+  padding: 28px;
+  border-radius: 20px;
+  background: var(--card);
+  border: 1px dashed var(--border);
+  text-align: center;
+}
+
 .insight-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -260,6 +283,16 @@ menu {
   justify-content: flex-end;
   gap: 12px;
   margin-top: 20px;
+}
+
+.form-error {
+  margin: 12px 0 0;
+  color: #c2410c;
+  font-size: 0.85rem;
+}
+
+.form-error:empty {
+  margin: 0;
 }
 
 footer {

@@ -29,28 +29,14 @@
         </div>
         <div class="hero-card">
           <h3>Create a new goal</h3>
-          <form id="goalForm">
-            <label>
-              Goal title
-              <input type="text" id="goalTitle" placeholder="Run a 10K" required />
-            </label>
-            <label>
-              Why it matters
-              <input
-                type="text"
-                id="goalReason"
-                placeholder="Build endurance for race day"
-                required
-              />
-            </label>
-            <label>
-              Target date
-              <input type="date" id="goalDate" required />
-            </label>
-            <div class="form-actions">
-              <button type="submit" class="primary">Add goal</button>
-            </div>
-          </form>
+          <p class="muted">
+            Keep your goals focused and realistic. You can edit them anytime.
+          </p>
+          <div class="form-actions">
+            <button type="button" class="primary" id="openGoalDialog">
+              Add goal
+            </button>
+          </div>
         </div>
       </div>
     </header>
@@ -68,6 +54,12 @@
         </div>
 
         <div id="goalList" class="goal-grid"></div>
+        <div id="emptyState" class="empty-state" hidden>
+          <h3>No goals yet</h3>
+          <p class="muted">
+            Add your first goal to start tracking steps and momentum.
+          </p>
+        </div>
       </section>
 
       <section class="section insights">
@@ -96,7 +88,8 @@
 
     <dialog id="stepDialog">
       <form id="stepForm" method="dialog">
-        <h3>Add a step</h3>
+        <h3 id="stepDialogTitle">Add a step</h3>
+        <p class="form-error" id="stepError" role="alert" aria-live="polite"></p>
         <label>
           Step detail
           <input type="text" id="stepDetail" required />
@@ -107,7 +100,34 @@
         </label>
         <menu>
           <button class="ghost" value="cancel">Cancel</button>
-          <button class="primary" type="submit">Save step</button>
+          <button class="primary" type="submit" id="stepDialogSubmit">
+            Save step
+          </button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="goalDialog">
+      <form id="goalDialogForm" method="dialog">
+        <h3 id="goalDialogTitle">Add a goal</h3>
+        <p class="form-error" id="goalDialogError" role="alert" aria-live="polite"></p>
+        <label>
+          Goal title
+          <input type="text" id="goalDialogTitleInput" required />
+        </label>
+        <label>
+          Why it matters
+          <input type="text" id="goalDialogReasonInput" required />
+        </label>
+        <label>
+          Target date
+          <input type="date" id="goalDialogDateInput" required />
+        </label>
+        <menu>
+          <button class="ghost" value="cancel">Cancel</button>
+          <button class="primary" type="submit" id="goalDialogSubmit">
+            Save goal
+          </button>
         </menu>
       </form>
     </dialog>
