@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PulsePath - Fitness Goal Tracker</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <header class="hero">
+      <nav class="nav">
+        <div class="logo">PulsePath</div>
+        <button class="ghost" id="resetApp">Reset</button>
+      </nav>
+      <div class="hero-content">
+        <div>
+          <p class="eyebrow">Your guided fitness plan</p>
+          <h1>Track every goal, step-by-step.</h1>
+          <p class="subhead">
+            Capture your fitness goals, break them into clear steps, and check off
+            progress as you go. Every step counts.
+          </p>
+        </div>
+        <div class="hero-card">
+          <h3>Create a new goal</h3>
+          <form id="goalForm">
+            <label>
+              Goal title
+              <input type="text" id="goalTitle" placeholder="Run a 10K" required />
+            </label>
+            <label>
+              Why it matters
+              <input
+                type="text"
+                id="goalReason"
+                placeholder="Build endurance for race day"
+                required
+              />
+            </label>
+            <label>
+              Target date
+              <input type="date" id="goalDate" required />
+            </label>
+            <div class="form-actions">
+              <button type="submit" class="primary">Add goal</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="section">
+        <div class="section-header">
+          <div>
+            <h2>Active goals</h2>
+            <p class="muted">
+              Add steps for each goal and track your progress in real time.
+            </p>
+          </div>
+          <button class="primary" id="addStepGlobal">Add step</button>
+        </div>
+
+        <div id="goalList" class="goal-grid"></div>
+      </section>
+
+      <section class="section insights">
+        <div>
+          <h2>Momentum insights</h2>
+          <p class="muted">
+            Celebrate the small wins. PulsePath shows how far you have come.
+          </p>
+        </div>
+        <div class="insight-cards">
+          <div class="insight-card">
+            <p class="label">Total goals</p>
+            <h3 id="totalGoals">0</h3>
+          </div>
+          <div class="insight-card">
+            <p class="label">Steps completed</p>
+            <h3 id="stepsComplete">0</h3>
+          </div>
+          <div class="insight-card">
+            <p class="label">Next milestone</p>
+            <h3 id="nextMilestone">Add a goal</h3>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <dialog id="stepDialog">
+      <form id="stepForm" method="dialog">
+        <h3>Add a step</h3>
+        <label>
+          Step detail
+          <input type="text" id="stepDetail" required />
+        </label>
+        <label>
+          Assign to goal
+          <select id="stepGoal"></select>
+        </label>
+        <menu>
+          <button class="ghost" value="cancel">Cancel</button>
+          <button class="primary" type="submit">Save step</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <footer>
+      <p>Built to keep you accountable — one step at a time.</p>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>
