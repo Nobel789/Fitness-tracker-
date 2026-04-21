@@ -1,52 +1,66 @@
-const goalList = document.getElementById("goalList");
-const addStepGlobal = document.getElementById("addStepGlobal");
-const openGoalDialog = document.getElementById("openGoalDialog");
-const stepDialog = document.getElementById("stepDialog");
-const stepForm = document.getElementById("stepForm");
-const stepDialogTitle = document.getElementById("stepDialogTitle");
-const stepDialogSubmit = document.getElementById("stepDialogSubmit");
-const stepError = document.getElementById("stepError");
-const stepDetail = document.getElementById("stepDetail");
-const stepGoal = document.getElementById("stepGoal");
-const resetApp = document.getElementById("resetApp");
-const emptyState = document.getElementById("emptyState");
-const goalDialog = document.getElementById("goalDialog");
-const goalDialogForm = document.getElementById("goalDialogForm");
-const goalDialogTitle = document.getElementById("goalDialogTitle");
-const goalDialogSubmit = document.getElementById("goalDialogSubmit");
-const goalDialogError = document.getElementById("goalDialogError");
-const goalDialogTitleInput = document.getElementById("goalDialogTitleInput");
-const goalDialogReasonInput = document.getElementById("goalDialogReasonInput");
-const goalDialogDateInput = document.getElementById("goalDialogDateInput");
-
-const totalGoals = document.getElementById("totalGoals");
-const stepsComplete = document.getElementById("stepsComplete");
-const nextMilestone = document.getElementById("nextMilestone");
+const elements = {
+  goalList: document.getElementById("goalList"),
+  addStepGlobal: document.getElementById("addStepGlobal"),
+  openGoalDialog: document.getElementById("openGoalDialog"),
+  stepDialog: document.getElementById("stepDialog"),
+  stepForm: document.getElementById("stepForm"),
+  stepDialogTitle: document.getElementById("stepDialogTitle"),
+  stepDialogSubmit: document.getElementById("stepDialogSubmit"),
+  stepError: document.getElementById("stepError"),
+  stepDetail: document.getElementById("stepDetail"),
+  stepGoal: document.getElementById("stepGoal"),
+  resetApp: document.getElementById("resetApp"),
+  emptyState: document.getElementById("emptyState"),
+  goalDialog: document.getElementById("goalDialog"),
+  goalDialogForm: document.getElementById("goalDialogForm"),
+  goalDialogTitle: document.getElementById("goalDialogTitle"),
+  goalDialogSubmit: document.getElementById("goalDialogSubmit"),
+  goalDialogError: document.getElementById("goalDialogError"),
+  goalDialogTitleInput: document.getElementById("goalDialogTitleInput"),
+  goalDialogReasonInput: document.getElementById("goalDialogReasonInput"),
+  goalDialogDateInput: document.getElementById("goalDialogDateInput"),
+  totalGoals: document.getElementById("totalGoals"),
+  stepsComplete: document.getElementById("stepsComplete"),
+  nextMilestone: document.getElementById("nextMilestone"),
+};
 
 const STORAGE_KEY = "pulsepath-goals";
-const MIN_TEXT = 3;
-const MAX_TITLE = 60;
-const MAX_REASON = 90;
-const MAX_STEP = 90;
+const LIMITS = {
+  minText: 3,
+  maxTitle: 60,
+  maxReason: 90,
+  maxStep: 90,
+};
 
-let goals = loadGoals();
-let editingGoalId = "";
-let editingStepGoalId = "";
-let editingStepId = "";
-let stepDialogMode = "add";
-let goalDialogMode = "add";
+const state = {
+  goals: loadGoals(),
+  goalDialogMode: "add",
+  stepDialogMode: "add",
+  editingGoalId: "",
+  editingStepGoalId: "",
+  editingStepId: "",
+};
 
 function loadGoals() {
   const stored = localStorage.getItem(STORAGE_KEY);
-  return stored ? JSON.parse(stored) : [];
+  if (!stored) return [];
+
+  try {
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }
 
 function saveGoals() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(goals));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.goals));
 }
 
 function formatDate(dateString) {
   const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return "Invalid date";
+
   return date.toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
@@ -55,148 +69,214 @@ function formatDate(dateString) {
 }
 
 function calculateProgress(goal) {
-  if (goal.steps.length === 0) {
-    return 0;
-  }
+  if (!goal.steps.length) return 0;
   const completed = goal.steps.filter((step) => step.completed).length;
   return Math.round((completed / goal.steps.length) * 100);
 }
 
 function validateGoalInput(title, reason, targetDate) {
-  if (title.length < MIN_TEXT || title.length > MAX_TITLE) {
-    return `Goal title must be ${MIN_TEXT}-${MAX_TITLE} characters.`;
+  if (title.length < LIMITS.minText || title.length > LIMITS.maxTitle) {
+    return `Goal title must be ${LIMITS.minText}-${LIMITS.maxTitle} characters.`;
   }
-  if (reason.length < MIN_TEXT || reason.length > MAX_REASON) {
-    return `Reason must be ${MIN_TEXT}-${MAX_REASON} characters.`;
+
+  if (reason.length < LIMITS.minText || reason.length > LIMITS.maxReason) {
+    return `Reason must be ${LIMITS.minText}-${LIMITS.maxReason} characters.`;
   }
-  if (!targetDate) {
-    return "Target date is required.";
-  }
+
+  if (!targetDate) return "Target date is required.";
+
   const target = new Date(targetDate);
-  if (Number.isNaN(target.getTime())) {
-    return "Target date is invalid.";
-  }
+  if (Number.isNaN(target.getTime())) return "Target date is invalid.";
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  if (target < today) {
-    return "Target date cannot be in the past.";
-  }
+  if (target < today) return "Target date cannot be in the past.";
+
   return "";
 }
 
 function validateStepInput(detail) {
-  if (detail.length < MIN_TEXT || detail.length > MAX_STEP) {
-    return `Step detail must be ${MIN_TEXT}-${MAX_STEP} characters.`;
+  if (detail.length < LIMITS.minText || detail.length > LIMITS.maxStep) {
+    return `Step detail must be ${LIMITS.minText}-${LIMITS.maxStep} characters.`;
   }
+
   return "";
 }
 
 function setFormError(element, message) {
-  if (!element) return;
   element.textContent = message;
 }
 
-function renderGoals() {
-  goalList.innerHTML = "";
-  stepGoal.innerHTML = "";
+function createButton({ label, className = "ghost", action, goalId, stepId }) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = className;
+  button.dataset.action = action;
+  if (goalId) button.dataset.goalId = goalId;
+  if (stepId) button.dataset.stepId = stepId;
+  button.textContent = label;
+  return button;
+}
 
-  if (goals.length === 0) {
-    emptyState.hidden = false;
-    addStepGlobal.disabled = true;
-  }
-  if (goals.length > 0) {
-    emptyState.hidden = true;
-    addStepGlobal.disabled = false;
-  }
+function createStepElement(goalId, step) {
+  const stepItem = document.createElement("div");
+  stepItem.className = `step-item ${step.completed ? "completed" : ""}`;
 
-  goals.forEach((goal) => {
-    const progress = calculateProgress(goal);
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.checked = step.completed;
+  checkbox.dataset.action = "toggle-step";
+  checkbox.dataset.goalId = goalId;
+  checkbox.dataset.stepId = step.id;
 
-    const card = document.createElement("article");
-    card.className = "goal-card";
+  const stepText = document.createElement("p");
+  stepText.className = "step-text";
+  stepText.textContent = step.detail;
 
-    card.innerHTML = `
-      <header>
-        <div>
-          <h3>${goal.title}</h3>
-          <p class="goal-meta">${goal.reason}</p>
-        </div>
-        <div class="goal-actions">
-          <span class="tag">Due ${formatDate(goal.targetDate)}</span>
-          <button class="ghost" data-edit-goal="${goal.id}">Edit</button>
-        </div>
-      </header>
-      <div>
-        <p class="goal-meta">${progress}% complete</p>
-        <div class="goal-progress"><span style="width: ${progress}%"></span></div>
-      </div>
-      <div class="step-list"></div>
-      <button class="ghost" data-goal-id="${goal.id}">Remove goal</button>
-    `;
-
-    const stepsContainer = card.querySelector(".step-list");
-
-    if (goal.steps.length === 0) {
-      stepsContainer.innerHTML =
-        '<p class="goal-meta">No steps yet. Add the first step.</p>';
-    } else {
-      goal.steps.forEach((step) => {
-        const stepItem = document.createElement("div");
-        stepItem.className = `step-item ${step.completed ? "completed" : ""}`;
-        stepItem.innerHTML = `
-          <input type="checkbox" ${step.completed ? "checked" : ""} data-goal-id="${goal.id}" data-step-id="${step.id}" />
-          <p class="step-text">${step.detail}</p>
-          <button class="ghost" data-edit-step="${step.id}" data-goal-id="${goal.id}">Edit</button>
-          <button class="ghost" data-remove-step="${step.id}" data-goal-id="${goal.id}">Remove</button>
-        `;
-        stepsContainer.appendChild(stepItem);
-      });
-    }
-
-    goalList.appendChild(card);
-
-    const option = document.createElement("option");
-    option.value = goal.id;
-    option.textContent = goal.title;
-    stepGoal.appendChild(option);
+  const editButton = createButton({
+    label: "Edit",
+    action: "edit-step",
+    goalId,
+    stepId: step.id,
   });
 
-  updateInsights();
+  const removeButton = createButton({
+    label: "Remove",
+    action: "remove-step",
+    goalId,
+    stepId: step.id,
+  });
+
+  stepItem.append(checkbox, stepText, editButton, removeButton);
+  return stepItem;
+}
+
+function createGoalCard(goal) {
+  const progress = calculateProgress(goal);
+
+  const card = document.createElement("article");
+  card.className = "goal-card";
+
+  const cardHeader = document.createElement("header");
+  const titleWrap = document.createElement("div");
+  const title = document.createElement("h3");
+  title.textContent = goal.title;
+  const reason = document.createElement("p");
+  reason.className = "goal-meta";
+  reason.textContent = goal.reason;
+  titleWrap.append(title, reason);
+
+  const actions = document.createElement("div");
+  actions.className = "goal-actions";
+  const dueTag = document.createElement("span");
+  dueTag.className = "tag";
+  dueTag.textContent = `Due ${formatDate(goal.targetDate)}`;
+  const editGoalButton = createButton({
+    label: "Edit",
+    action: "edit-goal",
+    goalId: goal.id,
+  });
+  actions.append(dueTag, editGoalButton);
+
+  cardHeader.append(titleWrap, actions);
+
+  const progressWrap = document.createElement("div");
+  const progressText = document.createElement("p");
+  progressText.className = "goal-meta";
+  progressText.textContent = `${progress}% complete`;
+  const progressTrack = document.createElement("div");
+  progressTrack.className = "goal-progress";
+  const progressBar = document.createElement("span");
+  progressBar.style.width = `${progress}%`;
+  progressTrack.append(progressBar);
+  progressWrap.append(progressText, progressTrack);
+
+  const stepsContainer = document.createElement("div");
+  stepsContainer.className = "step-list";
+  if (!goal.steps.length) {
+    const noSteps = document.createElement("p");
+    noSteps.className = "goal-meta";
+    noSteps.textContent = "No steps yet. Add the first step.";
+    stepsContainer.append(noSteps);
+  } else {
+    goal.steps.forEach((step) => stepsContainer.append(createStepElement(goal.id, step)));
+  }
+
+  const removeGoalButton = createButton({
+    label: "Remove goal",
+    action: "remove-goal",
+    goalId: goal.id,
+  });
+
+  card.append(cardHeader, progressWrap, stepsContainer, removeGoalButton);
+  return card;
 }
 
 function updateInsights() {
-  totalGoals.textContent = goals.length;
+  elements.totalGoals.textContent = state.goals.length;
 
-  const allSteps = goals.flatMap((goal) => goal.steps);
+  const allSteps = state.goals.flatMap((goal) => goal.steps);
   const completedSteps = allSteps.filter((step) => step.completed).length;
-  stepsComplete.textContent = `${completedSteps} / ${allSteps.length || 0}`;
+  elements.stepsComplete.textContent = `${completedSteps} / ${allSteps.length || 0}`;
 
-  const nextGoal = goals
+  const nextGoal = state.goals
     .filter((goal) => calculateProgress(goal) < 100)
     .sort((a, b) => new Date(a.targetDate) - new Date(b.targetDate))[0];
 
-  nextMilestone.textContent = nextGoal
+  elements.nextMilestone.textContent = nextGoal
     ? `${nextGoal.title} • ${calculateProgress(nextGoal)}%`
-    : goals.length
-    ? "All goals complete"
-    : "Add a goal";
+    : state.goals.length
+      ? "All goals complete"
+      : "Add a goal";
+}
+
+function renderGoalOptions(selectedGoalId = "") {
+  elements.stepGoal.innerHTML = "";
+
+  state.goals.forEach((goal) => {
+    const option = document.createElement("option");
+    option.value = goal.id;
+    option.textContent = goal.title;
+    elements.stepGoal.append(option);
+  });
+
+  if (selectedGoalId) {
+    elements.stepGoal.value = selectedGoalId;
+  }
+}
+
+function renderGoals() {
+  elements.goalList.innerHTML = "";
+
+  const hasGoals = state.goals.length > 0;
+  elements.emptyState.hidden = hasGoals;
+  elements.addStepGlobal.disabled = !hasGoals;
+
+  if (hasGoals) {
+    state.goals.forEach((goal) => {
+      elements.goalList.append(createGoalCard(goal));
+    });
+  }
+
+  renderGoalOptions();
+  updateInsights();
 }
 
 function addGoal(title, reason, targetDate) {
-  goals.unshift({
+  state.goals.unshift({
     id: crypto.randomUUID(),
     title,
     reason,
     targetDate,
     steps: [],
   });
+
   saveGoals();
   renderGoals();
-  return true;
 }
 
 function addStep(goalId, detail) {
-  const goal = goals.find((item) => item.id === goalId);
+  const goal = state.goals.find((item) => item.id === goalId);
   if (!goal) return false;
 
   goal.steps.push({
@@ -211,8 +291,9 @@ function addStep(goalId, detail) {
 }
 
 function toggleStep(goalId, stepId) {
-  const goal = goals.find((item) => item.id === goalId);
+  const goal = state.goals.find((item) => item.id === goalId);
   if (!goal) return;
+
   const step = goal.steps.find((item) => item.id === stepId);
   if (!step) return;
 
@@ -222,174 +303,209 @@ function toggleStep(goalId, stepId) {
 }
 
 function removeStep(goalId, stepId) {
-  const goal = goals.find((item) => item.id === goalId);
+  const goal = state.goals.find((item) => item.id === goalId);
   if (!goal) return;
-  goal.steps = goal.steps.filter((item) => item.id !== stepId);
+
+  goal.steps = goal.steps.filter((step) => step.id !== stepId);
   saveGoals();
   renderGoals();
 }
 
 function removeGoal(goalId) {
-  goals = goals.filter((goal) => goal.id !== goalId);
+  state.goals = state.goals.filter((goal) => goal.id !== goalId);
   saveGoals();
   renderGoals();
-  return true;
 }
 
 function openGoalDialogAdd() {
-  goalDialogMode = "add";
-  editingGoalId = "";
-  goalDialogTitle.textContent = "Add a goal";
-  goalDialogSubmit.textContent = "Save goal";
-  goalDialogTitleInput.value = "";
-  goalDialogReasonInput.value = "";
-  goalDialogDateInput.value = "";
-  setFormError(goalDialogError, "");
-  goalDialog.showModal();
+  state.goalDialogMode = "add";
+  state.editingGoalId = "";
+
+  elements.goalDialogTitle.textContent = "Add a goal";
+  elements.goalDialogSubmit.textContent = "Save goal";
+  elements.goalDialogTitleInput.value = "";
+  elements.goalDialogReasonInput.value = "";
+  elements.goalDialogDateInput.value = "";
+  setFormError(elements.goalDialogError, "");
+
+  elements.goalDialog.showModal();
 }
 
 function openGoalDialogEdit(goalId) {
-  const goal = goals.find((item) => item.id === goalId);
+  const goal = state.goals.find((item) => item.id === goalId);
   if (!goal) return;
-  goalDialogMode = "edit";
-  editingGoalId = goalId;
-  goalDialogTitle.textContent = "Edit goal";
-  goalDialogSubmit.textContent = "Save changes";
-  goalDialogTitleInput.value = goal.title;
-  goalDialogReasonInput.value = goal.reason;
-  goalDialogDateInput.value = goal.targetDate;
-  setFormError(goalDialogError, "");
-  goalDialog.showModal();
+
+  state.goalDialogMode = "edit";
+  state.editingGoalId = goalId;
+
+  elements.goalDialogTitle.textContent = "Edit goal";
+  elements.goalDialogSubmit.textContent = "Save changes";
+  elements.goalDialogTitleInput.value = goal.title;
+  elements.goalDialogReasonInput.value = goal.reason;
+  elements.goalDialogDateInput.value = goal.targetDate;
+  setFormError(elements.goalDialogError, "");
+
+  elements.goalDialog.showModal();
 }
 
-function openStepDialogAdd() {
-  if (goals.length === 0) {
+function openStepDialogAdd(goalId = "") {
+  if (!state.goals.length) {
     alert("Add a goal before adding steps.");
     return;
   }
-  stepDialogMode = "add";
-  editingStepGoalId = "";
-  editingStepId = "";
-  stepDialogTitle.textContent = "Add a step";
-  stepDialogSubmit.textContent = "Save step";
-  stepDetail.value = "";
-  setFormError(stepError, "");
-  stepDialog.showModal();
+
+  state.stepDialogMode = "add";
+  state.editingStepGoalId = "";
+  state.editingStepId = "";
+
+  elements.stepDialogTitle.textContent = "Add a step";
+  elements.stepDialogSubmit.textContent = "Save step";
+  elements.stepDetail.value = "";
+  setFormError(elements.stepError, "");
+  renderGoalOptions(goalId || state.goals[0].id);
+
+  elements.stepDialog.showModal();
 }
 
 function openStepDialogEdit(goalId, stepId) {
-  const goal = goals.find((item) => item.id === goalId);
+  const goal = state.goals.find((item) => item.id === goalId);
   if (!goal) return;
+
   const step = goal.steps.find((item) => item.id === stepId);
   if (!step) return;
-  stepDialogMode = "edit";
-  editingStepGoalId = goalId;
-  editingStepId = stepId;
-  stepDialogTitle.textContent = "Edit step";
-  stepDialogSubmit.textContent = "Save changes";
-  stepDetail.value = step.detail;
-  setFormError(stepError, "");
-  stepDialog.showModal();
+
+  state.stepDialogMode = "edit";
+  state.editingStepGoalId = goalId;
+  state.editingStepId = stepId;
+
+  elements.stepDialogTitle.textContent = "Edit step";
+  elements.stepDialogSubmit.textContent = "Save changes";
+  elements.stepDetail.value = step.detail;
+  setFormError(elements.stepError, "");
+  renderGoalOptions(goalId);
+
+  elements.stepDialog.showModal();
 }
 
-function syncStepGoalSelection(goalId) {
-  if (!goalId) return;
-  stepGoal.value = goalId;
-}
-
-openGoalDialog.addEventListener("click", openGoalDialogAdd);
-addStepGlobal.addEventListener("click", openStepDialogAdd);
-
-stepForm.addEventListener("submit", (event) => {
+function handleStepFormSubmit(event) {
   event.preventDefault();
-  const detail = stepDetail.value.trim();
+
+  const detail = elements.stepDetail.value.trim();
   const validation = validateStepInput(detail);
   if (validation) {
-    setFormError(stepError, validation);
+    setFormError(elements.stepError, validation);
     return;
   }
 
-  if (stepDialogMode === "add") {
-    const added = addStep(stepGoal.value, detail);
+  if (state.stepDialogMode === "add") {
+    const added = addStep(elements.stepGoal.value, detail);
     if (!added) {
-      setFormError(stepError, "Select a goal to assign this step.");
+      setFormError(elements.stepError, "Select a goal to assign this step.");
       return;
     }
   } else {
-    const goal = goals.find((item) => item.id === editingStepGoalId);
+    const goal = state.goals.find((item) => item.id === state.editingStepGoalId);
     if (!goal) return;
-    const step = goal.steps.find((item) => item.id === editingStepId);
+
+    const step = goal.steps.find((item) => item.id === state.editingStepId);
     if (!step) return;
+
     step.detail = detail;
     saveGoals();
     renderGoals();
   }
 
-  if (stepDialog.open) {
-    stepDialog.close();
+  if (elements.stepDialog.open) {
+    elements.stepDialog.close();
   }
-});
+}
 
-goalDialogForm.addEventListener("submit", (event) => {
+function handleGoalFormSubmit(event) {
   event.preventDefault();
-  const title = goalDialogTitleInput.value.trim();
-  const reason = goalDialogReasonInput.value.trim();
-  const targetDate = goalDialogDateInput.value;
+
+  const title = elements.goalDialogTitleInput.value.trim();
+  const reason = elements.goalDialogReasonInput.value.trim();
+  const targetDate = elements.goalDialogDateInput.value;
   const validation = validateGoalInput(title, reason, targetDate);
+
   if (validation) {
-    setFormError(goalDialogError, validation);
+    setFormError(elements.goalDialogError, validation);
     return;
   }
 
-  if (goalDialogMode === "add") {
+  if (state.goalDialogMode === "add") {
     addGoal(title, reason, targetDate);
   } else {
-    const goal = goals.find((item) => item.id === editingGoalId);
+    const goal = state.goals.find((item) => item.id === state.editingGoalId);
     if (!goal) return;
+
     goal.title = title;
     goal.reason = reason;
     goal.targetDate = targetDate;
+
     saveGoals();
     renderGoals();
   }
 
-  if (goalDialog.open) {
-    goalDialog.close();
+  if (elements.goalDialog.open) {
+    elements.goalDialog.close();
   }
-});
+}
 
-resetApp.addEventListener("click", () => {
-  if (confirm("Reset all goals and steps?")) {
-    goals = [];
-    saveGoals();
-    renderGoals();
+function handleGoalListClick(event) {
+  const button = event.target.closest("button[data-action]");
+  if (!button) return;
+
+  const { action, goalId, stepId } = button.dataset;
+
+  switch (action) {
+    case "remove-goal":
+      removeGoal(goalId);
+      break;
+    case "edit-goal":
+      openGoalDialogEdit(goalId);
+      break;
+    case "edit-step":
+      openStepDialogEdit(goalId, stepId);
+      break;
+    case "remove-step":
+      removeStep(goalId, stepId);
+      break;
+    default:
+      break;
   }
-});
+}
 
-goalList.addEventListener("click", (event) => {
-  const target = event.target;
-  if (target.matches("button[data-goal-id]")) {
-    removeGoal(target.dataset.goalId);
-  }
+function handleGoalListChange(event) {
+  const checkbox = event.target;
+  if (!(checkbox instanceof HTMLInputElement)) return;
+  if (checkbox.dataset.action !== "toggle-step") return;
 
-  if (target.matches("button[data-remove-step]")) {
-    removeStep(target.dataset.goalId, target.dataset.removeStep);
-  }
+  toggleStep(checkbox.dataset.goalId, checkbox.dataset.stepId);
+}
 
-  if (target.matches("button[data-edit-goal]")) {
-    openEditGoalDialog(target.dataset.editGoal);
-  }
+function bindEvents() {
+  elements.openGoalDialog.addEventListener("click", openGoalDialogAdd);
+  elements.addStepGlobal.addEventListener("click", () => openStepDialogAdd());
 
-  if (target.matches("button[data-edit-step]")) {
-    openEditStepDialog(target.dataset.goalId, target.dataset.editStep);
-  }
-});
+  elements.stepForm.addEventListener("submit", handleStepFormSubmit);
+  elements.goalDialogForm.addEventListener("submit", handleGoalFormSubmit);
 
-goalList.addEventListener("change", (event) => {
-  const target = event.target;
-  if (target.matches("input[type='checkbox']")) {
-    toggleStep(target.dataset.goalId, target.dataset.stepId);
-  }
-});
+  elements.resetApp.addEventListener("click", () => {
+    if (confirm("Reset all goals and steps?")) {
+      state.goals = [];
+      saveGoals();
+      renderGoals();
+    }
+  });
 
-renderGoals();
+  elements.goalList.addEventListener("click", handleGoalListClick);
+  elements.goalList.addEventListener("change", handleGoalListChange);
+}
+
+function initApp() {
+  bindEvents();
+  renderGoals();
+}
+
+initApp();
